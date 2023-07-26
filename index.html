@@ -126,7 +126,7 @@
     
     
     
-            <div tabindex="-1" class="app _3dqpi two" id="app-content">
+            <div tabindex="-1" class="app _3dqpi two" id="app-content" style="display:none">
     
                 <div class="MZIyP">
                     <div class="_3q4NP k1feT">
@@ -695,7 +695,7 @@
                                                                 <div id="image-panel-document-preview" class="r4crx" data-js-attach-preview="true" style="display:none;">
                                                                     <div class="_2-_Pl">
                                                                         <div class="IuYNx _3E6Ha">
-                                                                            <div style="width: 641.263px; height: 516px;">
+                                                                            <div style="width: 641.263px; height: 360px;">
                                                                                 <img src="#" class="_3m_5X" id="img-panel-document-preview">
                                                                             </div>
                                                                         </div>
@@ -1331,9 +1331,12 @@
         </div>
     </div>
     <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" id="img-emoji-default"/>
-    <script src="src/util/Format.js"></script>
-    <script src="src/controller/WhatsAppController.js"></script>
-    <script src="src/app.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="dist/pdf.worker.bundle.js"></script>
+    <script src="dist/app.bundle.js"></script>
 </body>
 
 </html>

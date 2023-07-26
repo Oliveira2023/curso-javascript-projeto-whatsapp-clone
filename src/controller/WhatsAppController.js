@@ -1,13 +1,36 @@
-class WhatsAppController {
+import {Format} from "../util/Format"
+import {CameraController} from "./CameraController"
+import {MicrophoneController} from "./MicrophoneController"
+import {DocumentPreviewController} from "./DocumentPreviewController"
+import { Firebase } from './../util/Firebase'
+
+
+
+export class WhatsAppController {
 
     constructor(){
     
         console.log('WhatsAppController OK')
 
+        this._firebase = new Firebase()
+        this.initAuth()
         this.elementsPrototype()
-
         this.loadElements()
         this.initEvents()
+        
+    }
+
+    initAuth(){
+        
+        this._firebase.initAuth().then(response=>{
+            
+            this._user = response.user
+            this.el.appContent.css({
+                display: 'flex'
+            })
+        }).catch(err=>{
+            console.error(err)
+        })
     }
 
     loadElements(){
@@ -197,18 +220,44 @@ class WhatsAppController {
             this.el.panelCamera.css({
                 'height': '100%'
             })
+
+            this._camera = new CameraController(this.el.videoCamera)
         })
 
         this.el.btnClosePanelCamera.on('click',e=>{
         
             this.closeAllMainPanel()
             this.el.panelMessagesContainer.show()
-        
+            this._camera.stop()
         })
 
         this.el.btnTakePicture.on('click', e=>{
             
-            console.log('take picture')
+            let dataUrl = this._camera.takePicture()
+            this._camera.stop()
+            this.el.pictureCamera.src = dataUrl
+            this.el.pictureCamera.show()
+            this.el.videoCamera.hide()
+            this.el.btnReshootPanelCamera.show()
+            this.el.containerTakePicture.hide()
+            this.el.containerSendPicture.show()
+
+        })
+
+        this.el.btnReshootPanelCamera.on('click', ()=> {
+
+            
+            this.el.pictureCamera.hide()
+            this.el.videoCamera.show()
+            this.el.btnReshootPanelCamera.hide()
+            this.el.containerTakePicture.show()
+            this.el.containerSendPicture.hide()
+            this._camera = new CameraController(this.el.videoCamera)
+
+        })
+        this.el.btnSendPicture.on('click', ()=>{
+
+            this._camera.stop()
 
         })
 
@@ -219,6 +268,49 @@ class WhatsAppController {
             this.el.panelDocumentPreview.css({
                 'height': '100%'
             })
+            this.el.inputDocument.click()
+        })
+
+        this.el.inputDocument.on('change', e=>{
+
+            if (this.el.inputDocument.files.length){
+
+                let file = this.el.inputDocument.files[0]
+                
+                this._documentPreviewController = new DocumentPreviewController(file)
+                
+                this._documentPreviewController.getPreviewData().then(result=>{
+
+                    this.el.imgPanelDocumentPreview.src = result.src
+                    this.el.infoPanelDocumentPreview.innerHTML = result.info
+                    this.el.imagePanelDocumentPreview.show()
+                    this.el.filePanelDocumentPreview.hide()
+
+                }).catch(err=>{
+
+                    console.log(file.type)
+                    
+                    switch (file.type) {
+
+                        case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-xls'
+                        break
+
+                        case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-doc'
+
+                        break
+
+                        default:
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-generic'
+                    }
+                    this.el.filenamePanelDocumentPreview.innerHTML = file.name
+                    this.el.imagePanelDocumentPreview.hide()
+                    this.el.filePanelDocumentPreview.show()
+
+                })
+            }
+            
         })
 
         this.el.btnClosePanelDocumentPreview.on('click',e=>{
@@ -247,13 +339,128 @@ class WhatsAppController {
         this.el.btnCloseModalContacts.on('click', ()=>{
             this.el.modalContacts.hide()
         })
+
+        this.el.btnSendMicrophone.on('click',()=>{
+            
+            this.el.recordMicrophone.show()
+            this.el.btnSendMicrophone.hide()
+            
+
+            this._microphoneController = new MicrophoneController()
+            
+            this._microphoneController.on('ready', (audio)=>{
+
+                console.log('evento ready')
+
+                this._microphoneController.startRecorder()
+
+            })
+
+            this._microphoneController.on('recordtimer', timer=>{
+
+                this.el.recordMicrophoneTimer.innerHTML = Format.toTime(timer)
+            })
+         
+        })
+
+        this.el.btnCancelMicrophone.on('click', ()=>{
+        
+            this._microphoneController.stopRecorder()
+            this.closeRecordMicrophone()
+
+        })
+
+        this.el.btnFinishMicrophone.on('click', ()=>{
+        
+            this._microphoneController.stopRecorder()
+            this.closeRecordMicrophone()
+            
+        })
+
+        this.el.inputText.on('keypress', e=>{
+        
+            if (e.key === 'Enter' && !e.ctrlKey){
+
+                e.preventDefault()
+                this.el.btnSend.click()
+            }
+        })
+
+        this.el.inputText.on('keyup', e=>{
+        
+            if (this.el.inputText.innerHTML.length){
+                this.el.inputPlaceholder.hide()
+                this.el.btnSendMicrophone.hide()
+                this.el.btnSend.show()
+            }else{
+                this.el.inputPlaceholder.show()
+                this.el.btnSendMicrophone.show()
+                this.el.btnSend.hide()
+            }
+        })
+
+        this.el.btnSend.on('click', e=>{
+            console.log(this.el.inputText.innerHTML)
+        })
+
+        this.el.btnEmojis.on('click', ()=>{
+            this.el.panelEmojis.toggleClass('open')
+
+        })
+        this.el.panelEmojis.querySelectorAll('.emojik').forEach(emoji=>{
+        
+            emoji.on('click', e=>{
+                console.log(emoji.dataset.unicode)
+
+                let img = this.el.imgEmojiDefault.cloneNode()
+
+                img.style.cssText = emoji.style.cssText
+                img.dataset.unicode = emoji.dataset.unicode
+                img.alt = emoji.dataset.unicode
+
+                emoji.classList.forEach(name=>{
+                    img.classList.add(name)
+                })
+
+                let cursor = window.getSelection()
+
+                if (!cursor.focusNode ||!cursor.focusNode.id == 'input-text') {
+                    this.el.inputText.focus()
+                    cursor = window.getSelection()
+                }
+
+                let range = document.createRange()
+
+                range = cursor.getRangeAt(0)
+                range.deleteContents()
+
+                let frag = document.createDocumentFragment()
+
+                frag.appendChild(img)
+
+                range.insertNode(frag)
+
+                range.setStartAfter(img)
+
+                this.el.inputText.dispatchEvent(new Event('keyup'))
+
+            })
+        })
+
+     }
+
+    closeRecordMicrophone(){
+    
+        this.el.recordMicrophone.hide()
+        this.el.btnSendMicrophone.show()
+    
     }
 
     closeAllMainPanel(){
 
         this.el.panelMessagesContainer.hide()
-        this.el.panelDocumentPreview.removeClass()
-        this.el.panelCamera.removeClass()
+        this.el.panelDocumentPreview.removeClass('open')
+        this.el.panelCamera.removeClass('open')
 
     }
 
