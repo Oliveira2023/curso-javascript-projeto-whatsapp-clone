@@ -7,7 +7,7 @@ export class ClassEvent {
     }
 
     on(eventName, fn){
-        console.log('on')
+        
         if(!this._events[eventName]) this._events[eventName] = new Array()
         this._events[eventName].push(fn)
     }
