@@ -4,8 +4,8 @@ import {MicrophoneController} from "./MicrophoneController"
 import {DocumentPreviewController} from "./DocumentPreviewController"
 import { Firebase } from './../util/Firebase'
 import { User } from "../model/User"
-
-
+import { Chat } from "../model/Chat"
+import { Message } from "../model/Message"
 
 export class WhatsAppController {
 
@@ -140,25 +140,75 @@ export class WhatsAppController {
 
                 div.on('click', e=>{
 
-                    this.el.activeName.innerHTML = contact.name
-                    this.el.activeStatus.innerHTML  = contact.status
-
-                    if(contact.photo){
-                        let img = this.el.activePhoto
-                        img.src = contact.photo
-                        img.show()
-                    }
-
-                    this.el.home.hide()
-                    this.el.main.css({
-                        display: 'flex'
-                    })
+                    console.log('chatId:', contact.chatId)
+                    this.setActiveChat(contact)
+                    
                 })
                 
                 this.el.contactsMessagesList.appendChild(div)
             })
         })
         this._user.getContacts()
+    }
+
+    setActiveChat(contact){
+
+        if (this._contactActive){
+            Message.getRef(this._contactActive.chatId).onSnapshot(()=>{})
+        }
+        this._contactActive = contact
+        this.el.activeName.innerHTML = contact.name
+        this.el.activeStatus.innerHTML  = contact.status
+
+        if(contact.photo){
+            let img = this.el.activePhoto
+            img.src = contact.photo
+            img.show()
+        }
+
+        this.el.home.hide()
+        this.el.main.css({
+            display: 'flex'
+        })
+
+        this.el.panelMessagesContainer.innerHTML = ''
+
+        Message.getRef(this._contactActive.chatId).orderBy('timeStamp').onSnapshot(docs =>{
+
+            let scrollTop = this.el.panelMessagesContainer.scrollTop
+            let scrollTopMax = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight)
+            let autoScroll = (scrollTop	>= scrollTopMax -1)//se true é porque chegou no limite maximo que pode descer
+
+            docs.forEach(doc =>{
+
+                let data = doc.data()
+                data.id = doc.id
+
+                if (!this.el.panelMessagesContainer.querySelector('#_' + data.id)){
+                    
+
+                    let message = new Message()
+
+                    message.fromJSON(data)
+
+                    let me = (data.from === this._user.email)
+
+                    let view = message.getViewElement(me)
+
+                    this.el.panelMessagesContainer.appendChild(view)
+
+                }
+               
+            })
+            console.log(scrollTop - scrollTopMax)
+            if (autoScroll){
+
+                this.el.panelMessagesContainer.scrollTop = (this.el.panelMessagesContainer.scrollHeight - this.el.panelMessagesContainer.offsetHeight)
+            }else{
+                this.el.panelMessagesContainer.scrollTop = scrollTop
+            }
+        })
+
     }
 
     loadElements(){
@@ -320,18 +370,26 @@ export class WhatsAppController {
             contact.on('datachange', data=>{
 
                 if (data.name){
-                    this._user.addContact(contact).then(()=>{
 
-                        this.el.btnClosePanelAddContact.click()
-                        console.info('Contato foi adicionado!')
+                    Chat.createIfNotExists(this._user.email, contact.email).then(chat =>{
+
+                        contact.chatId = chat.id
+
+                        this._user.chatId = chat.id
+
+                        contact.addContact(this._user)
+
+                        this._user.addContact(contact).then(()=>{
+
+                            this.el.btnClosePanelAddContact.click()
+                            console.info('Contato foi adicionado!')
+                    })
+                    
                     })
                 }else{
                     console.error('Usuário não encontrado')
                 }
-
             })
-            
-       
         })
 
         this.el.contactsMessagesList.querySelectorAll('.contact-item').forEach(item=>{
@@ -553,7 +611,16 @@ export class WhatsAppController {
         })
 
         this.el.btnSend.on('click', e=>{
-            console.log(this.el.inputText.innerHTML)
+
+            Message.send(
+                this._contactActive.chatId, 
+                this._user.email,
+                'text',
+                this.el.inputText.innerHTML
+                )
+
+            this.el.inputText.innerHTML = ''
+            this.el.panelEmojis.removeClass('open')
         })
 
         this.el.btnEmojis.on('click', ()=>{
@@ -563,7 +630,7 @@ export class WhatsAppController {
         this.el.panelEmojis.querySelectorAll('.emojik').forEach(emoji=>{
         
             emoji.on('click', e=>{
-                console.log(emoji.dataset.unicode)
+
 
                 let img = this.el.imgEmojiDefault.cloneNode()
 
