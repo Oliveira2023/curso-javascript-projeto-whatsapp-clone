@@ -20,7 +20,7 @@ export class Chat extends Model{
     }
 
     static create(meEmail, contactEmail){
-
+        console.log('CREATE')
         return new Promise((s, f)=>{
 
             let users = {}
@@ -55,13 +55,13 @@ export class Chat extends Model{
     static createIfNotExists(meEmail, contactEmail){
 
         return new Promise((s, f)=>{
-
+            console.log('inside createIfNotExists')
             Chat.find(meEmail, contactEmail).then(chats=>{
-
+                
                 if (chats.empty){
                     
                     Chat.create(meEmail, contactEmail).then(chat=>{
-
+                        console.log('contacts:',meEmail, contactEmail)
                         s(chat)
 
                     })

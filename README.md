@@ -20,3 +20,15 @@ Lista de recursos usados em aula para este projeto
 | Cloud Storage | https://firebase.google.com/docs/storage/?authuser=0 |
 | PDF.js | https://mozilla.github.io/pdf.js/ |
 | MediaDevices.getUserMedia() | https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia |
+
+
+criação da função no cloud functions:
+
+comandos=>
+    instação do cloud functions:
+        npm install -g firebase-tools // -g pra ser global
+        firebase login //pra autenticar a linha de comando, abre web login
+        firebase init functions // cria arquivos no nosso projeto, aqui escolhe o projeto
+            a função é criada no arquivo index.js
+        firebase deploy --only functions // pra criar a função
+        
